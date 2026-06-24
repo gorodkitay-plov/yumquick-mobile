@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,13 +13,14 @@ import CartScreen from './src/screens/CartScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import RestaurantScreen from './src/screens/RestaurantScreen';
+import SplashScreen from './src/screens/SplashScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
     return (
-        <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#FF6B35', tabBarInactiveTintColor: '#999', headerShown: false }}>
+        <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#FF6B00', tabBarInactiveTintColor: '#999', headerShown: false, tabBarStyle: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#F0E8DF', height: 60, paddingBottom: 8 } }}>
             <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Главная', tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🏠</Text> }} />
             <Tab.Screen name="Cart" component={CartScreen} options={{ title: 'Корзина', tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🛒</Text> }} />
             <Tab.Screen name="Orders" component={OrdersScreen} options={{ title: 'Заказы', tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>📋</Text> }} />
@@ -30,8 +31,20 @@ function TabNavigator() {
 
 export default function App() {
     const { isAuthenticated, checkAuth } = useAuthStore();
+    const [showSplash, setShowSplash] = useState(false);
 
     useEffect(() => { checkAuth(); }, []);
+
+    // Показываем splash когда пользователь только что вошёл
+    useEffect(() => {
+        if (isAuthenticated) {
+            setShowSplash(true);
+        }
+    }, [isAuthenticated]);
+
+    if (showSplash) {
+        return <SplashScreen onFinish={() => setShowSplash(false)} />;
+    }
 
     return (
         <NavigationContainer>
