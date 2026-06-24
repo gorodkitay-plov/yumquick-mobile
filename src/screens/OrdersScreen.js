@@ -1,82 +1,143 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator } from 'react-native';
+import {
+  View, Text, FlatList, TouchableOpacity,
+  StyleSheet, SafeAreaView, ActivityIndicator, StatusBar
+} from 'react-native';
 import { orderApi } from '../api';
 
-const STATUS_LABELS = {
-  PENDING: { label: 'Ожидает', color: '#FF9500' },
-  CONFIRMED: { label: 'Подтверждён', color: '#007AFF' },
-  PREPARING: { label: 'Готовится', color: '#FF6B35' },
-  READY_FOR_PICKUP: { label: 'Готов', color: '#34C759' },
-  ON_THE_WAY: { label: 'В пути', color: '#007AFF' },
-  DELIVERED: { label: 'Доставлен', color: '#34C759' },
-  CANCELLED: { label: 'Отменён', color: '#FF3B30' },
+const TABS = ['Active', 'Completed', 'Cancelled'];
+
+const STATUS_MAP = {
+  PENDING: { tab: 'Active', label: 'Ожидает', color: '#FF9500' },
+  CONFIRMED: { tab: 'Active', label: 'Подтверждён', color: '#007AFF' },
+  PREPARING: { tab: 'Active', label: 'Готовится', color: '#FF6B00' },
+  READY_FOR_PICKUP: { tab: 'Active', label: 'Готов', color: '#34C759' },
+  ON_THE_WAY: { tab: 'Active', label: 'В пути', color: '#007AFF' },
+  DELIVERED: { tab: 'Completed', label: 'Доставлен', color: '#34C759' },
+  CANCELLED: { tab: 'Cancelled', label: 'Отменён', color: '#FF3B30' },
 };
 
 export default function OrdersScreen() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Active');
 
   useEffect(() => {
     orderApi.getAll()
-      .then(res => setOrders(res.data.data?.content ?? res.data.data ?? []))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+        .then(res => setOrders(res.data.data?.content ?? res.data.data ?? []))
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
   }, []);
 
-  if (isLoading) return <ActivityIndicator size="large" color="#FF6B35" style={{ flex: 1 }} />;
+  const filteredOrders = orders.filter(o => {
+    const map = STATUS_MAP[o.status];
+    return map?.tab === activeTab;
+  });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}><Text style={styles.title}>📋 Мои заказы</Text></View>
-      {orders.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>📋</Text>
-          <Text style={styles.emptyText}>Заказов ещё нет</Text>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
+
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Orders</Text>
         </View>
-      ) : (
-        <FlatList
-          data={orders}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            const status = STATUS_LABELS[item.status] ?? { label: item.status, color: '#999' };
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardTop}>
-                  <Text style={styles.restaurantName}>{item.restaurantName ?? 'Ресторан'}</Text>
-                  <View style={[styles.badge, { backgroundColor: status.color + '20' }]}>
-                    <Text style={[styles.badgeText, { color: status.color }]}>{status.label}</Text>
-                  </View>
-                </View>
-                <Text style={styles.items}>{item.items?.map(i => i.titleSnapshot).join(', ')}</Text>
-                <View style={styles.cardBottom}>
-                  <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString('ru-RU')}</Text>
-                  <Text style={styles.total}>₩{item.total?.toLocaleString()}</Text>
-                </View>
-              </View>
-            );
-          }}
-          contentContainerStyle={styles.list}
-        />
-      )}
-    </SafeAreaView>
+
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          {TABS.map(tab => (
+              <TouchableOpacity
+                  key={tab}
+                  style={[styles.tab, activeTab === tab && styles.tabActive]}
+                  onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+              </TouchableOpacity>
+          ))}
+        </View>
+
+        {isLoading ? (
+            <ActivityIndicator size="large" color="#FF6B00" style={{ flex: 1 }} />
+        ) : filteredOrders.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyEmoji}>📋</Text>
+              <Text style={styles.emptyTitle}>You don't have any</Text>
+              <Text style={styles.emptyTitle}>{activeTab.toLowerCase()} orders</Text>
+              <Text style={styles.emptySubtitle}>at this time</Text>
+            </View>
+        ) : (
+            <FlatList
+                data={filteredOrders}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.list}
+                renderItem={({ item }) => {
+                  const status = STATUS_MAP[item.status] ?? { label: item.status, color: '#999' };
+                  return (
+                      <View style={styles.card}>
+                        <View style={styles.cardImageContainer}>
+                          <Text style={styles.cardEmoji}>🍽️</Text>
+                        </View>
+                        <View style={styles.cardInfo}>
+                          <Text style={styles.cardName}>{item.restaurantName ?? 'Ресторан'}</Text>
+                          <Text style={styles.cardDate}>
+                            {new Date(item.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                          <Text style={styles.cardItems}>
+                            {item.items?.length ?? 0} items · ₩{Number(item.total ?? 0).toLocaleString()}
+                          </Text>
+                        </View>
+                        <View style={styles.cardActions}>
+                          <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
+                            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+                          </View>
+                          {activeTab === 'Completed' && (
+                              <TouchableOpacity style={styles.reviewBtn}>
+                                <Text style={styles.reviewBtnText}>Leave a review</Text>
+                              </TouchableOpacity>
+                          )}
+                          {activeTab === 'Active' && (
+                              <TouchableOpacity style={styles.trackBtn}>
+                                <Text style={styles.trackBtnText}>Track Order</Text>
+                              </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                  );
+                }}
+            />
+        )}
+      </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyEmoji: { fontSize: 64 },
-  emptyText: { fontSize: 16, color: '#999' },
-  list: { padding: 16, gap: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  restaurantName: { fontSize: 16, fontWeight: '600', color: '#1a1a1a', flex: 1 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-  items: { fontSize: 13, color: '#666', marginBottom: 12 },
-  cardBottom: { flexDirection: 'row', justifyContent: 'space-between' },
-  date: { fontSize: 13, color: '#999' },
-  total: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
+  container: { flex: 1, backgroundColor: '#FFF8F0' },
+  header: { paddingHorizontal: 20, paddingVertical: 16 },
+  headerTitle: { fontSize: 24, fontWeight: '700', color: '#1A1A1A' },
+
+  tabsContainer: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 16, backgroundColor: '#fff', borderRadius: 16, padding: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 12 },
+  tabActive: { backgroundColor: '#FF6B00' },
+  tabText: { fontSize: 14, fontWeight: '600', color: '#888' },
+  tabTextActive: { color: '#fff' },
+
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  emptyEmoji: { fontSize: 64, marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
+  emptySubtitle: { fontSize: 14, color: '#888', marginTop: 4 },
+
+  list: { paddingHorizontal: 16, gap: 12 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  cardImageContainer: { width: 64, height: 64, borderRadius: 12, backgroundColor: '#FFF0E6', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  cardEmoji: { fontSize: 28 },
+  cardInfo: { flex: 1 },
+  cardName: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
+  cardDate: { fontSize: 12, color: '#888', marginBottom: 4 },
+  cardItems: { fontSize: 12, color: '#888' },
+  cardActions: { alignItems: 'flex-end', gap: 8 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusText: { fontSize: 11, fontWeight: '600' },
+  reviewBtn: { backgroundColor: '#FFF0E6', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  reviewBtnText: { fontSize: 11, color: '#FF6B00', fontWeight: '600' },
+  trackBtn: { backgroundColor: '#FF6B00', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  trackBtnText: { fontSize: 11, color: '#fff', fontWeight: '600' },
 });
