@@ -13,6 +13,8 @@ import CartScreen from './src/screens/CartScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import RestaurantScreen from './src/screens/RestaurantScreen';
+import CheckoutScreen from './src/screens/CheckoutScreen';
+import OrderConfirmedScreen from './src/screens/OrderConfirmedScreen';
 import SplashScreen from './src/screens/SplashScreen';
 
 const Stack = createStackNavigator();
@@ -35,11 +37,8 @@ export default function App() {
 
     useEffect(() => { checkAuth(); }, []);
 
-    // Показываем splash когда пользователь только что вошёл
     useEffect(() => {
-        if (isAuthenticated) {
-            setShowSplash(true);
-        }
+        if (isAuthenticated) setShowSplash(true);
     }, [isAuthenticated]);
 
     if (showSplash) {
@@ -53,6 +52,8 @@ export default function App() {
                     <>
                         <Stack.Screen name="Main" component={TabNavigator} />
                         <Stack.Screen name="Restaurant" component={RestaurantScreen} />
+                        <Stack.Screen name="Checkout" component={CheckoutScreen} />
+                        <Stack.Screen name="OrderConfirmed" component={OrderConfirmedScreen} />
                     </>
                 ) : (
                     <>

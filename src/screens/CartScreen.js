@@ -11,7 +11,7 @@ export default function CartScreen({ navigation }) {
   useEffect(() => { fetchCart(); }, []);
 
   const handleCheckout = () => {
-    Alert.alert('Оформление заказа', 'Функция в разработке');
+    navigation.navigate('Checkout');
   };
 
   if (isLoading) return (
