@@ -46,7 +46,7 @@ export default function CartScreen() {
           <View style={styles.footer}>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Итого</Text>
-              <Text style={styles.totalAmount}>₩{cart?.total?.toLocaleString()}</Text>
+              <Text style={styles.totalAmount}>₩{cart?.subtotal?.toLocaleString()}</Text>
             </View>
             <TouchableOpacity style={styles.checkoutBtn} onPress={() => Alert.alert('Оформление заказа', 'Функция в разработке')}>
               <Text style={styles.checkoutText}>Оформить заказ</Text>
