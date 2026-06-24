@@ -26,7 +26,14 @@ function RestaurantCard({ item, onPress }) {
 export default function HomeScreen({ navigation }) {
   const [restaurants, setRestaurants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadRestaurants();
+    setRefreshing(false);
+  };
 
   const loadRestaurants = async () => {
     try {
@@ -63,8 +70,8 @@ export default function HomeScreen({ navigation }) {
             <RestaurantCard item={item} onPress={() => navigation.navigate('Restaurant', { id: item.id, name: item.name })} />
           )}
           contentContainerStyle={styles.list}
-          onRefresh={loadRestaurants}
-          refreshing={isLoading}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
         />
       )}
     </SafeAreaView>
