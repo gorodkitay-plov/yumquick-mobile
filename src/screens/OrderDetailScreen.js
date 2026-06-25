@@ -4,23 +4,27 @@ import {
     StyleSheet, SafeAreaView, ActivityIndicator, StatusBar, Alert
 } from 'react-native';
 import { orderApi } from '../api';
+import { useOrderTracking } from '../hooks/useOrderTracking';
 
 const STATUS_MAP = {
-    PENDING: { label: 'Ожидает', color: '#FF9500' },
-    CONFIRMED: { label: 'Подтверждён', color: '#007AFF' },
-    PREPARING: { label: 'Готовится', color: '#FF6B00' },
-    READY_FOR_PICKUP: { label: 'Готов', color: '#34C759' },
-    ON_THE_WAY: { label: 'В пути', color: '#007AFF' },
-    DELIVERED: { label: 'Доставлен', color: '#34C759' },
-    CANCELLED: { label: 'Отменён', color: '#FF3B30' },
+    PENDING: { label: 'Ожидает', color: '#FF9500', emoji: '⏳' },
+    CONFIRMED: { label: 'Подтверждён', color: '#007AFF', emoji: '✅' },
+    PREPARING: { label: 'Готовится', color: '#FF6B00', emoji: '👨‍🍳' },
+    READY_FOR_PICKUP: { label: 'Готов', color: '#34C759', emoji: '📦' },
+    ON_THE_WAY: { label: 'В пути', color: '#007AFF', emoji: '🛵' },
+    DELIVERED: { label: 'Доставлен', color: '#34C759', emoji: '🎉' },
+    CANCELLED: { label: 'Отменён', color: '#FF3B30', emoji: '❌' },
 };
 
 const CANCEL_ALLOWED = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP'];
+
+const STATUS_STEPS = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'ON_THE_WAY', 'DELIVERED'];
 
 export default function OrderDetailScreen({ route, navigation }) {
     const { orderId } = route.params;
     const [order, setOrder] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { location, connected } = useOrderTracking(orderId);
 
     useEffect(() => {
         orderApi.getById(orderId)
@@ -61,8 +65,9 @@ export default function OrderDetailScreen({ route, navigation }) {
 
     if (!order) return null;
 
-    const status = STATUS_MAP[order.status] ?? { label: order.status, color: '#999' };
+    const status = STATUS_MAP[order.status] ?? { label: order.status, color: '#999', emoji: '📋' };
     const canCancel = CANCEL_ALLOWED.includes(order.status);
+    const currentStepIndex = STATUS_STEPS.indexOf(order.status);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -81,6 +86,7 @@ export default function OrderDetailScreen({ route, navigation }) {
 
                 {/* Status card */}
                 <View style={styles.statusCard}>
+                    <Text style={styles.statusEmoji}>{status.emoji}</Text>
                     <Text style={styles.restaurantName}>{order.restaurantName}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
                         <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
@@ -93,6 +99,60 @@ export default function OrderDetailScreen({ route, navigation }) {
                     </Text>
                     <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
                 </View>
+
+                {/* Progress tracker */}
+                {order.status !== 'CANCELLED' && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>📍 Статус заказа</Text>
+                        <View style={styles.progressContainer}>
+                            {STATUS_STEPS.map((step, index) => {
+                                const s = STATUS_MAP[step];
+                                const isCompleted = index <= currentStepIndex;
+                                const isCurrent = index === currentStepIndex;
+                                return (
+                                    <View key={step} style={styles.stepRow}>
+                                        <View style={styles.stepLeft}>
+                                            <View style={[
+                                                styles.stepDot,
+                                                isCompleted && { backgroundColor: s.color },
+                                                isCurrent && styles.stepDotCurrent,
+                                            ]}>
+                                                <Text style={styles.stepDotText}>{isCompleted ? '✓' : ''}</Text>
+                                            </View>
+                                            {index < STATUS_STEPS.length - 1 && (
+                                                <View style={[styles.stepLine, isCompleted && index < currentStepIndex && { backgroundColor: '#34C759' }]} />
+                                            )}
+                                        </View>
+                                        <View style={styles.stepInfo}>
+                                            <Text style={[styles.stepLabel, isCurrent && { color: s.color, fontWeight: '700' }]}>
+                                                {s.emoji} {s.label}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+
+                        {/* Live tracking */}
+                        {order.status === 'ON_THE_WAY' && (
+                            <View style={styles.trackingCard}>
+                                <View style={styles.trackingHeader}>
+                                    <Text style={styles.trackingTitle}>🛵 Курьер в пути</Text>
+                                    <View style={[styles.liveDot, { backgroundColor: connected ? '#34C759' : '#FF3B30' }]} />
+                                </View>
+                                {location ? (
+                                    <Text style={styles.trackingCoords}>
+                                        Координаты: {location.lat?.toFixed(4)}, {location.lng?.toFixed(4)}
+                                    </Text>
+                                ) : (
+                                    <Text style={styles.trackingWaiting}>
+                                        {connected ? 'Ожидание данных...' : 'Подключение...'}
+                                    </Text>
+                                )}
+                            </View>
+                        )}
+                    </View>
+                )}
 
                 {/* Delivery address */}
                 <View style={styles.section}>
@@ -158,6 +218,7 @@ const styles = StyleSheet.create({
     scroll: { padding: 16, gap: 16 },
 
     statusCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, alignItems: 'center', gap: 8, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+    statusEmoji: { fontSize: 48 },
     restaurantName: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
     statusBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 },
     statusText: { fontSize: 14, fontWeight: '700' },
@@ -168,6 +229,23 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
     sectionValue: { fontSize: 14, color: '#444' },
     sectionNote: { fontSize: 13, color: '#888', fontStyle: 'italic' },
+
+    progressContainer: { gap: 0 },
+    stepRow: { flexDirection: 'row', alignItems: 'flex-start', minHeight: 48 },
+    stepLeft: { alignItems: 'center', width: 32 },
+    stepDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#E0E0E0', alignItems: 'center', justifyContent: 'center' },
+    stepDotCurrent: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: '#FF6B00' },
+    stepDotText: { fontSize: 10, color: '#fff', fontWeight: '700' },
+    stepLine: { width: 2, flex: 1, backgroundColor: '#E0E0E0', marginVertical: 2 },
+    stepInfo: { flex: 1, paddingLeft: 12, paddingTop: 2 },
+    stepLabel: { fontSize: 13, color: '#888', paddingBottom: 16 },
+
+    trackingCard: { backgroundColor: '#F0F8FF', borderRadius: 12, padding: 12, gap: 8 },
+    trackingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    trackingTitle: { fontSize: 14, fontWeight: '700', color: '#007AFF' },
+    liveDot: { width: 10, height: 10, borderRadius: 5 },
+    trackingCoords: { fontSize: 13, color: '#444' },
+    trackingWaiting: { fontSize: 13, color: '#888' },
 
     itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     itemQty: { fontSize: 14, fontWeight: '700', color: '#FF6B00', width: 24 },

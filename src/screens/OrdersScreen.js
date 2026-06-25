@@ -17,19 +17,25 @@ const STATUS_MAP = {
   CANCELLED: { tab: 'Cancelled', label: 'Отменён', color: '#FF3B30' },
 };
 
+const CANCEL_ALLOWED = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP'];
+
 export default function OrdersScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Active');
 
   useEffect(() => {
-    orderApi.getAll()
-        .then(res => setOrders(res.data.data?.content ?? res.data.data ?? []))
-        .catch(() => {})
-        .finally(() => setIsLoading(false));
-  }, []);
+    const unsubscribe = navigation.addListener('focus', () => {
+      setIsLoading(true);
+      orderApi.getAll()
+          .then(res => setOrders(res.data.data?.content ?? res.data.data ?? []))
+          .catch(() => {})
+          .finally(() => setIsLoading(false));
+    });
+    return unsubscribe;
+  }, [navigation]);
 
-  const cancelOrder = async (orderId) => {
+  const cancelOrder = (orderId) => {
     Alert.alert(
         'Отменить заказ?',
         'Вы уверены что хотите отменить заказ?',
@@ -115,19 +121,6 @@ export default function OrdersScreen({ navigation }) {
                           {activeTab === 'Completed' && (
                               <TouchableOpacity style={styles.reviewBtn}>
                                 <Text style={styles.reviewBtnText}>Leave a review</Text>
-                              </TouchableOpacity>
-                          )}
-                          {activeTab === 'Active' && (
-                              <TouchableOpacity style={styles.trackBtn}>
-                                <Text style={styles.trackBtnText}>Track Order</Text>
-                              </TouchableOpacity>
-                          )}
-                          {activeTab === 'Active' && !['ON_THE_WAY', 'DELIVERED'].includes(item.status) && (
-                              <TouchableOpacity
-                                  style={styles.cancelBtn}
-                                  onPress={() => cancelOrder(item.id)}
-                              >
-                                <Text style={styles.cancelBtnText}>Cancel</Text>
                               </TouchableOpacity>
                           )}
                         </View>
