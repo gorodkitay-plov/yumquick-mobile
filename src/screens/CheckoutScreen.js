@@ -59,12 +59,17 @@ export default function CheckoutScreen({ navigation }) {
         }
         setIsLoading(true);
         try {
-            await orderApi.checkout({
+            const res = await orderApi.checkout({
                 addressId: selectedAddress.id,
                 notes: note,
             });
+            const orderData = res.data.data;
             await clearCart();
-            navigation.replace('OrderConfirmed');
+            navigation.replace('Payment', {
+                orderId: orderData.id,
+                amount: orderData.total,
+                orderName: 'YumQuick Order',
+            });
         } catch (e) {
             Alert.alert('Ошибка', e.response?.data?.message ?? 'Не удалось оформить заказ');
         } finally {

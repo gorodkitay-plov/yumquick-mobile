@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, SafeAreaView, ActivityIndicator, StatusBar
+  StyleSheet, SafeAreaView, ActivityIndicator, StatusBar, Alert
 } from 'react-native';
 import { orderApi } from '../api';
 
@@ -17,7 +17,7 @@ const STATUS_MAP = {
   CANCELLED: { tab: 'Cancelled', label: 'Отменён', color: '#FF3B30' },
 };
 
-export default function OrdersScreen() {
+export default function OrdersScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Active');
@@ -28,6 +28,30 @@ export default function OrdersScreen() {
         .catch(() => {})
         .finally(() => setIsLoading(false));
   }, []);
+
+  const cancelOrder = async (orderId) => {
+    Alert.alert(
+        'Отменить заказ?',
+        'Вы уверены что хотите отменить заказ?',
+        [
+          { text: 'Нет', style: 'cancel' },
+          {
+            text: 'Да, отменить',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await orderApi.cancel(orderId);
+                setOrders(prev => prev.map(o =>
+                    o.id === orderId ? { ...o, status: 'CANCELLED' } : o
+                ));
+              } catch {
+                Alert.alert('Ошибка', 'Не удалось отменить заказ');
+              }
+            },
+          },
+        ]
+    );
+  };
 
   const filteredOrders = orders.filter(o => {
     const map = STATUS_MAP[o.status];
@@ -42,7 +66,6 @@ export default function OrdersScreen() {
           <Text style={styles.headerTitle}>My Orders</Text>
         </View>
 
-        {/* Tabs */}
         <View style={styles.tabsContainer}>
           {TABS.map(tab => (
               <TouchableOpacity
@@ -72,7 +95,7 @@ export default function OrdersScreen() {
                 renderItem={({ item }) => {
                   const status = STATUS_MAP[item.status] ?? { label: item.status, color: '#999' };
                   return (
-                      <View style={styles.card}>
+                      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}>
                         <View style={styles.cardImageContainer}>
                           <Text style={styles.cardEmoji}>🍽️</Text>
                         </View>
@@ -99,8 +122,16 @@ export default function OrdersScreen() {
                                 <Text style={styles.trackBtnText}>Track Order</Text>
                               </TouchableOpacity>
                           )}
+                          {activeTab === 'Active' && !['ON_THE_WAY', 'DELIVERED'].includes(item.status) && (
+                              <TouchableOpacity
+                                  style={styles.cancelBtn}
+                                  onPress={() => cancelOrder(item.id)}
+                              >
+                                <Text style={styles.cancelBtnText}>Cancel</Text>
+                              </TouchableOpacity>
+                          )}
                         </View>
-                      </View>
+                      </TouchableOpacity>
                   );
                 }}
             />
@@ -140,4 +171,6 @@ const styles = StyleSheet.create({
   reviewBtnText: { fontSize: 11, color: '#FF6B00', fontWeight: '600' },
   trackBtn: { backgroundColor: '#FF6B00', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
   trackBtnText: { fontSize: 11, color: '#fff', fontWeight: '600' },
+  cancelBtn: { backgroundColor: '#FFE5E5', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  cancelBtnText: { fontSize: 11, color: '#FF3B30', fontWeight: '600' },
 });

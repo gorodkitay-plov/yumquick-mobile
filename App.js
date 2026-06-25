@@ -14,8 +14,10 @@ import OrdersScreen from './src/screens/OrdersScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import RestaurantScreen from './src/screens/RestaurantScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
+import PaymentScreen from './src/screens/PaymentScreen';
 import OrderConfirmedScreen from './src/screens/OrderConfirmedScreen';
 import SplashScreen from './src/screens/SplashScreen';
+import OrderDetailScreen from './src/screens/OrderDetailScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -53,7 +55,9 @@ export default function App() {
                         <Stack.Screen name="Main" component={TabNavigator} />
                         <Stack.Screen name="Restaurant" component={RestaurantScreen} />
                         <Stack.Screen name="Checkout" component={CheckoutScreen} />
+                        <Stack.Screen name="Payment" component={PaymentScreen} />
                         <Stack.Screen name="OrderConfirmed" component={OrderConfirmedScreen} />
+                        <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
                     </>
                 ) : (
                     <>
