@@ -60,7 +60,7 @@ export default function RestaurantScreen({ route, navigation }) {
                     <Text style={styles.backIcon}>‹</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>{name}</Text>
-                <TouchableOpacity style={styles.cartBtn} onPress={() => navigation.navigate('Cart')}>
+                <TouchableOpacity style={styles.cartBtn} onPress={() => navigation.navigate('Main', { screen: 'Cart' })}>
                     <Text style={styles.cartIcon}>🛒</Text>
                     {cartCount > 0 && (
                         <View style={styles.cartBadge}>
