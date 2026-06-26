@@ -38,7 +38,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.cardSubtitle}>Welcome back!</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email or Mobile Number</Text>
+              <Text style={styles.inputLabel}>Email</Text>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputIcon}>📧</Text>
                 <TextInput
@@ -123,8 +123,8 @@ const styles = StyleSheet.create({
   logoSubtitle: { fontSize: 14, color: '#888', marginTop: 4 },
 
   card: { backgroundColor: '#fff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  cardTitle: { fontSize: 24, fontWeight: '700', color: '#1A1A1A' },
-  cardSubtitle: { fontSize: 14, color: '#888', marginTop: 4, marginBottom: 24 },
+  cardTitle: { fontSize: 24, fontWeight: '700', color: '#1A1A1A', textAlign: 'center' },
+  cardSubtitle: { fontSize: 14, color: '#888', marginTop: 4, marginBottom: 24, textAlign: 'center' },
 
   inputGroup: { marginBottom: 16 },
   inputLabel: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', marginBottom: 8 },

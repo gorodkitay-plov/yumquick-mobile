@@ -7,7 +7,7 @@ import { WebView } from 'react-native-webview';
 import { api } from '../api';
 
 const TOSS_CLIENT_KEY = 'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm';
-const BASE_URL = 'http://172.30.1.71:8080';
+const BASE_URL = 'http://172.30.1.27:8080';
 
 export default function PaymentScreen({ route, navigation }) {
     const { orderId, amount, orderName } = route.params;

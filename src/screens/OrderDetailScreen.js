@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { orderApi } from '../api';
 import { useOrderTracking } from '../hooks/useOrderTracking';
+import MapView from '../components/MapView';
 
 const STATUS_MAP = {
     PENDING: { label: 'Ожидает', color: '#FF9500', emoji: '⏳' },
@@ -17,7 +18,6 @@ const STATUS_MAP = {
 };
 
 const CANCEL_ALLOWED = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP'];
-
 const STATUS_STEPS = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'ON_THE_WAY', 'DELIVERED'];
 
 export default function OrderDetailScreen({ route, navigation }) {
@@ -73,7 +73,6 @@ export default function OrderDetailScreen({ route, navigation }) {
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
 
-            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                     <Text style={styles.backIcon}>‹</Text>
@@ -100,7 +99,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                     <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
                 </View>
 
-                {/* Progress tracker */}
+                {/* Progress + Map */}
                 {order.status !== 'CANCELLED' && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>📍 Статус заказа</Text>
@@ -133,22 +132,18 @@ export default function OrderDetailScreen({ route, navigation }) {
                             })}
                         </View>
 
-                        {/* Live tracking */}
+                        {/* Map */}
+                        <MapView
+                            deliveryLat={order.deliveryLat}
+                            deliveryLng={order.deliveryLng}
+                            courierLat={location?.lat}
+                            courierLng={location?.lng}
+                        />
+
                         {order.status === 'ON_THE_WAY' && (
-                            <View style={styles.trackingCard}>
-                                <View style={styles.trackingHeader}>
-                                    <Text style={styles.trackingTitle}>🛵 Курьер в пути</Text>
-                                    <View style={[styles.liveDot, { backgroundColor: connected ? '#34C759' : '#FF3B30' }]} />
-                                </View>
-                                {location ? (
-                                    <Text style={styles.trackingCoords}>
-                                        Координаты: {location.lat?.toFixed(4)}, {location.lng?.toFixed(4)}
-                                    </Text>
-                                ) : (
-                                    <Text style={styles.trackingWaiting}>
-                                        {connected ? 'Ожидание данных...' : 'Подключение...'}
-                                    </Text>
-                                )}
+                            <View style={styles.trackingHeader}>
+                                <Text style={styles.trackingTitle}>🛵 Курьер в пути</Text>
+                                <View style={[styles.liveDot, { backgroundColor: connected ? '#34C759' : '#FF3B30' }]} />
                             </View>
                         )}
                     </View>
@@ -196,7 +191,6 @@ export default function OrderDetailScreen({ route, navigation }) {
                     </View>
                 </View>
 
-                {/* Cancel button */}
                 {canCancel && (
                     <TouchableOpacity style={styles.cancelBtn} onPress={cancelOrder}>
                         <Text style={styles.cancelBtnText}>Отменить заказ</Text>
@@ -214,9 +208,7 @@ const styles = StyleSheet.create({
     backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
     backIcon: { fontSize: 28, color: '#1A1A1A', marginTop: -2 },
     headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: '#1A1A1A', textAlign: 'center' },
-
     scroll: { padding: 16, gap: 16 },
-
     statusCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, alignItems: 'center', gap: 8, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
     statusEmoji: { fontSize: 48 },
     restaurantName: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
@@ -224,12 +216,10 @@ const styles = StyleSheet.create({
     statusText: { fontSize: 14, fontWeight: '700' },
     orderDate: { fontSize: 13, color: '#888' },
     orderId: { fontSize: 12, color: '#bbb' },
-
     section: { backgroundColor: '#fff', borderRadius: 16, padding: 16, gap: 10, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
     sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 4 },
     sectionValue: { fontSize: 14, color: '#444' },
     sectionNote: { fontSize: 13, color: '#888', fontStyle: 'italic' },
-
     progressContainer: { gap: 0 },
     stepRow: { flexDirection: 'row', alignItems: 'flex-start', minHeight: 48 },
     stepLeft: { alignItems: 'center', width: 32 },
@@ -239,26 +229,19 @@ const styles = StyleSheet.create({
     stepLine: { width: 2, flex: 1, backgroundColor: '#E0E0E0', marginVertical: 2 },
     stepInfo: { flex: 1, paddingLeft: 12, paddingTop: 2 },
     stepLabel: { fontSize: 13, color: '#888', paddingBottom: 16 },
-
-    trackingCard: { backgroundColor: '#F0F8FF', borderRadius: 12, padding: 12, gap: 8 },
     trackingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     trackingTitle: { fontSize: 14, fontWeight: '700', color: '#007AFF' },
     liveDot: { width: 10, height: 10, borderRadius: 5 },
-    trackingCoords: { fontSize: 13, color: '#444' },
-    trackingWaiting: { fontSize: 13, color: '#888' },
-
     itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     itemQty: { fontSize: 14, fontWeight: '700', color: '#FF6B00', width: 24 },
     itemName: { flex: 1, fontSize: 14, color: '#1A1A1A' },
     itemPrice: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
-
     priceRow: { flexDirection: 'row', justifyContent: 'space-between' },
     priceLabel: { fontSize: 14, color: '#888' },
     priceValue: { fontSize: 14, color: '#1A1A1A' },
     totalRow: { borderTopWidth: 1, borderTopColor: '#F0E8DF', paddingTop: 10, marginTop: 4 },
     totalLabel: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
     totalValue: { fontSize: 16, fontWeight: '800', color: '#FF6B00' },
-
     cancelBtn: { backgroundColor: '#FF3B30', borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 8, marginBottom: 24 },
     cancelBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
