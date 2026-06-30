@@ -119,7 +119,10 @@ export default function OrdersScreen({ navigation }) {
                             <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
                           </View>
                           {activeTab === 'Completed' && (
-                              <TouchableOpacity style={styles.reviewBtn}>
+                              <TouchableOpacity
+                                  style={styles.reviewBtn}
+                                  onPress={() => navigation.navigate('WriteReview', { orderId: item.id, restaurantName: item.restaurantName })}
+                              >
                                 <Text style={styles.reviewBtnText}>Leave a review</Text>
                               </TouchableOpacity>
                           )}

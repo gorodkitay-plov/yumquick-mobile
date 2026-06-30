@@ -20,6 +20,7 @@ import SplashScreen from './src/screens/SplashScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import AddressesScreen from './src/screens/AddressesScreen';
+import WriteReviewScreen from './src/screens/WriteReviewScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -62,6 +63,7 @@ export default function App() {
                         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                         <Stack.Screen name="Addresses" component={AddressesScreen} />
+                        <Stack.Screen name="WriteReview" component={WriteReviewScreen} />
                     </>
                 ) : (
                     <>

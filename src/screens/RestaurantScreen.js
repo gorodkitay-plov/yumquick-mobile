@@ -3,7 +3,7 @@ import {
     View, Text, FlatList, TouchableOpacity,
     StyleSheet, SafeAreaView, ActivityIndicator, Alert, ScrollView, StatusBar
 } from 'react-native';
-import { restaurantApi, cartApi } from '../api';
+import { restaurantApi, cartApi, reviewApi } from '../api';
 import { useCartStore } from '../store/cartStore';
 
 export default function RestaurantScreen({ route, navigation }) {
@@ -12,6 +12,9 @@ export default function RestaurantScreen({ route, navigation }) {
     const [restaurant, setRestaurant] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [activeTab, setActiveTab] = useState('menu');
+    const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
     const { fetchCart, cart } = useCartStore();
 
     const cartCount = cart?.items?.reduce((sum, i) => sum + i.quantity, 0) ?? 0;
@@ -29,6 +32,16 @@ export default function RestaurantScreen({ route, navigation }) {
         }).catch(() => {})
             .finally(() => setIsLoading(false));
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'reviews' && reviews.length === 0) {
+            setReviewsLoading(true);
+            reviewApi.getRestaurantReviews(id)
+                .then(res => setReviews(res.data.data?.content ?? res.data.data ?? []))
+                .catch(() => {})
+                .finally(() => setReviewsLoading(false));
+        }
+    }, [activeTab]);
 
     const handleAddToCart = async (item) => {
         try {
@@ -91,55 +104,116 @@ export default function RestaurantScreen({ route, navigation }) {
                 </View>
             )}
 
-            {/* Category tabs */}
-            {menu.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 60, flexShrink: 1 }} contentContainerStyle={styles.tabs}>
-                    {menu.map(cat => (
-                        <TouchableOpacity
-                            key={cat.id}
-                            style={[styles.tab, selectedCategory === cat.id && styles.tabActive]}
-                            onPress={() => setSelectedCategory(cat.id)}
-                        >
-                            <Text style={[styles.tabText, selectedCategory === cat.id && styles.tabTextActive]}>
-                                {cat.name}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            )}
+            {/* Menu/Reviews tabs */}
+            <View style={styles.mainTabs}>
+                <TouchableOpacity
+                    style={[styles.mainTab, activeTab === 'menu' && styles.mainTabActive]}
+                    onPress={() => setActiveTab('menu')}
+                >
+                    <Text style={[styles.mainTabText, activeTab === 'menu' && styles.mainTabTextActive]}>Menu</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.mainTab, activeTab === 'reviews' && styles.mainTabActive]}
+                    onPress={() => setActiveTab('reviews')}
+                >
+                    <Text style={[styles.mainTabText, activeTab === 'reviews' && styles.mainTabTextActive]}>
+                        Reviews {restaurant?.ratingCount ? `(${restaurant.ratingCount})` : ''}
+                    </Text>
+                </TouchableOpacity>
+            </View>
 
-            {/* Menu items */}
-            <FlatList
-                data={allItems}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.list}
-                ListEmptyComponent={
-                    <View style={styles.empty}>
-                        <Text style={styles.emptyEmoji}>🍽️</Text>
-                        <Text style={styles.emptyText}>Меню пусто</Text>
-                    </View>
-                }
-                renderItem={({ item }) => (
-                    <View style={styles.menuItem}>
-                        <View style={styles.menuItemImage}>
-                            <Text style={styles.menuItemEmoji}>🍔</Text>
-                        </View>
-                        <View style={styles.menuItemInfo}>
-                            <Text style={styles.menuItemName}>{item.title}</Text>
-                            {item.description && (
-                                <Text style={styles.menuItemDesc} numberOfLines={2}>{item.description}</Text>
-                            )}
-                            <Text style={styles.menuItemPrice}>₩{Number(item.price).toLocaleString()}</Text>
-                        </View>
-                        <TouchableOpacity
-                            style={styles.addBtn}
-                            onPress={() => handleAddToCart(item)}
-                        >
-                            <Text style={styles.addBtnText}>+</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            />
+            {activeTab === 'menu' ? (
+                <>
+                    {/* Category tabs */}
+                    {menu.length > 0 && (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 60, flexShrink: 1 }} contentContainerStyle={styles.tabs}>
+                            {menu.map(cat => (
+                                <TouchableOpacity
+                                    key={cat.id}
+                                    style={[styles.tab, selectedCategory === cat.id && styles.tabActive]}
+                                    onPress={() => setSelectedCategory(cat.id)}
+                                >
+                                    <Text style={[styles.tabText, selectedCategory === cat.id && styles.tabTextActive]}>
+                                        {cat.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    )}
+
+                    {/* Menu items */}
+                    <FlatList
+                        data={allItems}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.list}
+                        ListEmptyComponent={
+                            <View style={styles.empty}>
+                                <Text style={styles.emptyEmoji}>🍽️</Text>
+                                <Text style={styles.emptyText}>Меню пусто</Text>
+                            </View>
+                        }
+                        renderItem={({ item }) => (
+                            <View style={styles.menuItem}>
+                                <View style={styles.menuItemImage}>
+                                    <Text style={styles.menuItemEmoji}>🍔</Text>
+                                </View>
+                                <View style={styles.menuItemInfo}>
+                                    <Text style={styles.menuItemName}>{item.title}</Text>
+                                    {item.description && (
+                                        <Text style={styles.menuItemDesc} numberOfLines={2}>{item.description}</Text>
+                                    )}
+                                    <Text style={styles.menuItemPrice}>₩{Number(item.price).toLocaleString()}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.addBtn}
+                                    onPress={() => handleAddToCart(item)}
+                                >
+                                    <Text style={styles.addBtnText}>+</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    />
+                </>
+            ) : (
+                reviewsLoading ? (
+                    <ActivityIndicator size="large" color="#FF6B00" style={{ flex: 1 }} />
+                ) : (
+                    <FlatList
+                        data={reviews}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.list}
+                        ListEmptyComponent={
+                            <View style={styles.empty}>
+                                <Text style={styles.emptyEmoji}>⭐</Text>
+                                <Text style={styles.emptyText}>Отзывов пока нет</Text>
+                            </View>
+                        }
+                        renderItem={({ item }) => (
+                            <View style={styles.reviewCard}>
+                                <View style={styles.reviewHeader}>
+                                    <View style={styles.reviewAvatar}>
+                                        <Text style={styles.reviewAvatarText}>
+                                            {item.userName?.charAt(0)?.toUpperCase() ?? '?'}
+                                        </Text>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.reviewUserName}>{item.userName}</Text>
+                                        <Text style={styles.reviewStars}>
+                                            {'★'.repeat(item.restaurantRating)}{'☆'.repeat(5 - item.restaurantRating)}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.reviewDate}>
+                                        {new Date(item.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })}
+                                    </Text>
+                                </View>
+                                {item.comment && (
+                                    <Text style={styles.reviewComment}>{item.comment}</Text>
+                                )}
+                            </View>
+                        )}
+                    />
+                )
+            )}
         </SafeAreaView>
     );
 }
@@ -165,6 +239,12 @@ const styles = StyleSheet.create({
     metaDot: { color: '#ddd' },
     minOrder: { fontSize: 12, color: '#999' },
 
+    mainTabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, backgroundColor: '#fff', borderRadius: 14, padding: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+    mainTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+    mainTabActive: { backgroundColor: '#FF6B00' },
+    mainTabText: { fontSize: 14, fontWeight: '600', color: '#888' },
+    mainTabTextActive: { color: '#fff' },
+
     tabs: { paddingHorizontal: 16, gap: 8, paddingBottom: 12, alignItems: 'flex-start' },
     tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#eee' },
     tabActive: { backgroundColor: '#FF6B00', borderColor: '#FF6B00' },
@@ -185,4 +265,13 @@ const styles = StyleSheet.create({
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
     emptyEmoji: { fontSize: 48, marginBottom: 8 },
     emptyText: { fontSize: 16, color: '#999' },
+
+    reviewCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+    reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+    reviewAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FF6B00', alignItems: 'center', justifyContent: 'center' },
+    reviewAvatarText: { fontSize: 14, color: '#fff', fontWeight: '700' },
+    reviewUserName: { fontSize: 14, fontWeight: '700', color: '#1A1A1A' },
+    reviewStars: { fontSize: 13, color: '#FFB800', marginTop: 2 },
+    reviewDate: { fontSize: 11, color: '#bbb' },
+    reviewComment: { fontSize: 13, color: '#444', lineHeight: 18 },
 });

@@ -70,3 +70,10 @@ export const userApi = {
   deleteAddress: (id) => api.delete(`/users/me/addresses/${id}`),
   setDefaultAddress: (id) => api.patch(`/users/me/addresses/${id}/default`),
 };
+
+// review
+export const reviewApi = {
+  create: (data) => api.post('/reviews', data),
+  getMy: () => api.get('/reviews/my'),
+  getRestaurantReviews: (restaurantId) => api.get(`/restaurants/${restaurantId}/reviews`),
+};
