@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 
-const WS_URL = 'ws://172.30.1.27:8080/ws-native';
+const WS_URL = 'ws://172.30.1.71:8080/ws-native';
 
 export function useOrderTracking(orderId) {
     const [location, setLocation] = useState(null);

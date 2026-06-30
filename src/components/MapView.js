@@ -9,9 +9,7 @@ export default function MapView({ deliveryLat, deliveryLng, courierLat, courierL
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     * { margin: 0; padding: 0; }
     html, body, #map { width: 100%; height: 100%; }
@@ -19,42 +17,45 @@ export default function MapView({ deliveryLat, deliveryLng, courierLat, courierL
 </head>
 <body>
   <div id="map"></div>
+  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=4e9290f0c3aeee01fca6ba4429dbdec2&autoload=false"></script>
   <script>
-    var map = L.map('map', { zoomControl: false }).setView([${lat}, ${lng}], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+    kakao.maps.load(function() {
+      var map = new kakao.maps.Map(document.getElementById('map'), {
+        center: new kakao.maps.LatLng(${lat}, ${lng}),
+        level: 4
+      });
 
-    // Маркер доставки
-    var deliveryIcon = L.divIcon({
-      html: '<div style="background:#FF6B00;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);">📍</div>',
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      className: ''
+      // 배달 마커
+      var deliveryMarker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(${lat}, ${lng}),
+        map: map
+      });
+      new kakao.maps.InfoWindow({
+        content: '<div style="padding:4px 8px;font-size:12px;font-weight:bold;color:#FF6B00;">📍 배달 주소</div>'
+      }).open(map, deliveryMarker);
+
+      ${courierLat && courierLng ? `
+      var courierPos = new kakao.maps.LatLng(${courierLat}, ${courierLng});
+      var courierMarker = new kakao.maps.Marker({ position: courierPos, map: map });
+      new kakao.maps.InfoWindow({
+        content: '<div style="padding:4px 8px;font-size:12px;font-weight:bold;color:#007AFF;">🛵 배달원</div>'
+      }).open(map, courierMarker);
+
+      new kakao.maps.Polyline({
+        path: [courierPos, new kakao.maps.LatLng(${lat}, ${lng})],
+        strokeWeight: 3,
+        strokeColor: '#007AFF',
+        strokeOpacity: 0.7,
+        strokeStyle: 'dashed',
+        map: map
+      });
+
+      var bounds = new kakao.maps.LatLngBounds();
+      bounds.extend(courierPos);
+      bounds.extend(new kakao.maps.LatLng(${lat}, ${lng}));
+      map.setBounds(bounds);
+      ` : ''}
     });
-    L.marker([${lat}, ${lng}], { icon: deliveryIcon }).addTo(map)
-      .bindPopup('📍 Адрес доставки').openPopup();
-
-    ${courierLat && courierLng ? `
-    var courierIcon = L.divIcon({
-      html: '<div style="background:#007AFF;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🛵</div>',
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      className: ''
-    });
-    L.marker([${courierLat}, ${courierLng}], { icon: courierIcon }).addTo(map)
-      .bindPopup('🛵 Курьер');
-
-    L.polyline([[${courierLat}, ${courierLng}], [${lat}, ${lng}]], {
-      color: '#007AFF', weight: 3, dashArray: '8, 8'
-    }).addTo(map);
-
-    var group = L.featureGroup([
-      L.marker([${courierLat}, ${courierLng}]),
-      L.marker([${lat}, ${lng}])
-    ]);
-    map.fitBounds(group.getBounds().pad(0.2));
-    ` : ''}
   </script>
 </body>
 </html>`;
@@ -62,12 +63,13 @@ export default function MapView({ deliveryLat, deliveryLng, courierLat, courierL
     return (
         <View style={styles.container}>
             <WebView
-                source={{ html }}
+                source={{ html, baseUrl: 'http://172.30.1.71:8080' }}
                 style={styles.map}
                 javaScriptEnabled
                 domStorageEnabled
                 scrollEnabled={false}
                 originWhitelist={['*']}
+                mixedContentMode="always"
             />
         </View>
     );
