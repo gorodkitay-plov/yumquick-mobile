@@ -18,6 +18,8 @@ import PaymentScreen from './src/screens/PaymentScreen';
 import OrderConfirmedScreen from './src/screens/OrderConfirmedScreen';
 import SplashScreen from './src/screens/SplashScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
+import AddressesScreen from './src/screens/AddressesScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -58,6 +60,8 @@ export default function App() {
                         <Stack.Screen name="Payment" component={PaymentScreen} />
                         <Stack.Screen name="OrderConfirmed" component={OrderConfirmedScreen} />
                         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+                        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                        <Stack.Screen name="Addresses" component={AddressesScreen} />
                     </>
                 ) : (
                     <>

@@ -53,6 +53,8 @@ export const useAuthStore = create((set, get) => ({
     set({ user: null, isAuthenticated: false });
   },
 
+  setUser: (user) => set({ user }),
+
   // Проверка токена при запуске
   checkAuth: async () => {
     const token = await SecureStore.getItemAsync('accessToken');

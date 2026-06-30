@@ -22,6 +22,18 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleMenuItem = (id) => {
+    if (id === 'profile') {
+      navigation.navigate('EditProfile');
+      return;
+    }
+    if (id === 'orders') {
+      navigation.navigate('Main', { screen: 'Orders' });
+      return;
+    }
+    if (id === 'address') {
+      navigation.navigate('Addresses');
+      return;
+    }
     Alert.alert('Coming Soon', 'This feature is in development');
   };
 
@@ -46,7 +58,7 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.userName}>{user?.name}</Text>
               <Text style={styles.userEmail}>{user?.email}</Text>
             </View>
-            <TouchableOpacity style={styles.editBtn} onPress={() => handleMenuItem('profile')}>
+            <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
               <Text style={styles.editBtnText}>✏️</Text>
             </TouchableOpacity>
           </View>

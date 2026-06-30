@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useCartStore } from '../store/cartStore';
 import { orderApi, userApi } from '../api';
+import AddressPickerMap from '../components/AddressPickerMap';
 
 export default function CheckoutScreen({ navigation }) {
     const { cart, clearCart } = useCartStore();
@@ -15,7 +16,7 @@ export default function CheckoutScreen({ navigation }) {
     const [isLoading, setIsLoading] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [newAddress, setNewAddress] = useState({ label: 'HOME', detailAddress: '', lat: 37.4979, lng: 127.0276 });
-
+    const [mapInitialPos] = useState({ lat: 37.4979, lng: 127.0276 });
     const subtotal = cart?.subtotal ?? 0;
 
     const loadAddresses = () => {
@@ -190,7 +191,6 @@ export default function CheckoutScreen({ navigation }) {
                                 </TouchableOpacity>
                             ))}
                         </View>
-
                         <Text style={styles.inputLabel}>Address</Text>
                         <TextInput
                             style={styles.modalInput}
@@ -199,6 +199,21 @@ export default function CheckoutScreen({ navigation }) {
                             value={newAddress.detailAddress}
                             onChangeText={v => setNewAddress({ ...newAddress, detailAddress: v })}
                         />
+
+                        <Text style={styles.inputLabel}>Location on map (drag to set position)</Text>
+                        <View style={{ marginBottom: 20 }}>
+                            <AddressPickerMap
+                                initialLat={mapInitialPos.lat}
+                                initialLng={mapInitialPos.lng}
+                                baseUrl="http://172.30.1.71:8080"
+                                onLocationChange={(lat, lng, address) => setNewAddress(prev => ({
+                                    ...prev,
+                                    lat,
+                                    lng,
+                                    detailAddress: address || prev.detailAddress
+                                }))}
+                            />
+                        </View>
 
                         <View style={styles.modalButtons}>
                             <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddModal(false)}>
