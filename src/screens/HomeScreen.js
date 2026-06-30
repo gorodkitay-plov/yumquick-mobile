@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ActivityIndicator, TextInput, SafeAreaView, ScrollView,
@@ -26,10 +26,12 @@ const CATEGORIES = [
 export default function HomeScreen({ navigation }) {
   const [restaurants, setRestaurants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const { user } = useAuthStore();
+  const debounceRef = useRef(null);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -50,13 +52,30 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadRestaurants();
-    setRefreshing(false);
-  };
-
   useEffect(() => { loadRestaurants(); }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!search.trim()) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    debounceRef.current = setTimeout(() => {
+      restaurantApi.search(search.trim())
+          .then(res => setSearchResults(res.data.data?.content ?? res.data.data ?? []))
+          .catch(() => setSearchResults([]))
+          .finally(() => setIsSearching(false));
+    }, 400);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [search]);
+
+  const isSearchMode = search.trim().length > 0;
+  const displayList = isSearchMode ? (searchResults ?? []) : restaurants;
 
   return (
       <SafeAreaView style={styles.container}>
@@ -88,99 +107,154 @@ export default function HomeScreen({ navigation }) {
                 onChangeText={setSearch}
                 returnKeyType="search"
             />
+            {search.length > 0 && (
+                <TouchableOpacity onPress={() => setSearch('')}>
+                  <Text style={styles.clearIcon}>✕</Text>
+                </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Categories */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer} style={styles.categoriesScroll}>
-            {CATEGORIES.map(cat => (
-                <TouchableOpacity
-                    key={cat.id}
-                    style={[styles.categoryItem, selectedCategory === cat.id && styles.categoryItemSelected]}
-                    onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                >
-                  <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-                  <Text style={[styles.categoryName, selectedCategory === cat.id && styles.categoryNameSelected]}>{cat.name}</Text>
-                </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Banner */}
-          <View style={styles.banner}>
-            <View style={styles.bannerContent}>
-              <Text style={styles.bannerSmall}>Experience our</Text>
-              <Text style={styles.bannerBig}>delicious new dish</Text>
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>30% OFF</Text>
+        {isSearchMode ? (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 16 }}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {isSearching ? 'Поиск...' : `Результаты (${displayList.length})`}
+                </Text>
               </View>
-            </View>
-            <Text style={styles.bannerEmoji}>🍕</Text>
-          </View>
 
-          {/* Best Sellers */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Best Seller</Text>
-              <TouchableOpacity><Text style={styles.viewAll}>View All →</Text></TouchableOpacity>
-            </View>
-            {isLoading ? (
-                <ActivityIndicator size="large" color={COLORS.primary} style={{ padding: 20 }} />
-            ) : (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-                  {restaurants.map(item => (
-                      <TouchableOpacity
-                          key={item.id}
-                          style={styles.hCard}
-                          onPress={() => navigation.navigate('Restaurant', { id: item.id, name: item.name })}
-                      >
-                        <View style={styles.hCardImage}>
-                          <Text style={styles.hCardEmoji}>🍽️</Text>
-                        </View>
-                        <Text style={styles.hCardName} numberOfLines={1}>{item.name}</Text>
-                        <Text style={styles.hCardPrice}>от ₩{Number(item.minOrder).toLocaleString()}</Text>
-                      </TouchableOpacity>
-                  ))}
-                </ScrollView>
-            )}
-          </View>
-
-          {/* Recommend */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recommend</Text>
-            </View>
-            {restaurants.map(item => (
-                <TouchableOpacity
-                    key={item.id}
-                    style={styles.card}
-                    onPress={() => navigation.navigate('Restaurant', { id: item.id, name: item.name })}
-                >
-                  <View style={styles.cardImageContainer}>
-                    <Text style={styles.cardEmoji}>🍽️</Text>
-                    {item.deliveryFee === 0 && (
-                        <View style={styles.freeBadge}>
-                          <Text style={styles.freeBadgeText}>Free Delivery</Text>
-                        </View>
-                    )}
+              {isSearching ? (
+                  <ActivityIndicator size="large" color={COLORS.primary} style={{ padding: 40 }} />
+              ) : displayList.length === 0 ? (
+                  <View style={styles.noResults}>
+                    <Text style={styles.noResultsEmoji}>🔍</Text>
+                    <Text style={styles.noResultsText}>Ничего не найдено по запросу "{search}"</Text>
                   </View>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardName}>{item.name}</Text>
-                    <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
-                    <View style={styles.cardMeta}>
-                      <Text style={styles.cardRating}>⭐ {item.rating?.toFixed(1) ?? '0.0'}</Text>
-                      <Text style={styles.cardDot}>·</Text>
-                      <Text style={styles.cardDelivery}>🕐 {item.estimatedDeliveryMinutes ?? 30} мин</Text>
-                      <Text style={styles.cardDot}>·</Text>
-                      <Text style={styles.cardFee}>{Number(item.deliveryFee) > 0 ? `₩${Number(item.deliveryFee).toLocaleString()}` : 'Бесплатно'}</Text>
-                    </View>
+              ) : (
+                  <View style={styles.section}>
+                    {displayList.map(item => (
+                        <TouchableOpacity
+                            key={item.id}
+                            style={styles.card}
+                            onPress={() => navigation.navigate('Restaurant', { id: item.id, name: item.name })}
+                        >
+                          <View style={styles.cardImageContainer}>
+                            <Text style={styles.cardEmoji}>🍽️</Text>
+                            {item.deliveryFee === 0 && (
+                                <View style={styles.freeBadge}>
+                                  <Text style={styles.freeBadgeText}>Free Delivery</Text>
+                                </View>
+                            )}
+                          </View>
+                          <View style={styles.cardContent}>
+                            <Text style={styles.cardName}>{item.name}</Text>
+                            <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
+                            <View style={styles.cardMeta}>
+                              <Text style={styles.cardRating}>⭐ {item.rating?.toFixed(1) ?? '0.0'}</Text>
+                              <Text style={styles.cardDot}>·</Text>
+                              <Text style={styles.cardDelivery}>🕐 {item.estimatedDeliveryMinutes ?? 30} мин</Text>
+                              <Text style={styles.cardDot}>·</Text>
+                              <Text style={styles.cardFee}>{Number(item.deliveryFee) > 0 ? `₩${Number(item.deliveryFee).toLocaleString()}` : 'Бесплатно'}</Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                    ))}
                   </View>
-                </TouchableOpacity>
-            ))}
-          </View>
+              )}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+        ) : (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Categories */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer} style={styles.categoriesScroll}>
+                {CATEGORIES.map(cat => (
+                    <TouchableOpacity
+                        key={cat.id}
+                        style={[styles.categoryItem, selectedCategory === cat.id && styles.categoryItemSelected]}
+                        onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                    >
+                      <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                      <Text style={[styles.categoryName, selectedCategory === cat.id && styles.categoryNameSelected]}>{cat.name}</Text>
+                    </TouchableOpacity>
+                ))}
+              </ScrollView>
 
-          <View style={{ height: 20 }} />
-        </ScrollView>
+              {/* Banner */}
+              <View style={styles.banner}>
+                <View style={styles.bannerContent}>
+                  <Text style={styles.bannerSmall}>Experience our</Text>
+                  <Text style={styles.bannerBig}>delicious new dish</Text>
+                  <View style={styles.discountBadge}>
+                    <Text style={styles.discountText}>30% OFF</Text>
+                  </View>
+                </View>
+                <Text style={styles.bannerEmoji}>🍕</Text>
+              </View>
+
+              {/* Best Sellers */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Best Seller</Text>
+                  <TouchableOpacity><Text style={styles.viewAll}>View All →</Text></TouchableOpacity>
+                </View>
+                {isLoading ? (
+                    <ActivityIndicator size="large" color={COLORS.primary} style={{ padding: 20 }} />
+                ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+                      {restaurants.map(item => (
+                          <TouchableOpacity
+                              key={item.id}
+                              style={styles.hCard}
+                              onPress={() => navigation.navigate('Restaurant', { id: item.id, name: item.name })}
+                          >
+                            <View style={styles.hCardImage}>
+                              <Text style={styles.hCardEmoji}>🍽️</Text>
+                            </View>
+                            <Text style={styles.hCardName} numberOfLines={1}>{item.name}</Text>
+                            <Text style={styles.hCardPrice}>от ₩{Number(item.minOrder).toLocaleString()}</Text>
+                          </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                )}
+              </View>
+
+              {/* Recommend */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Recommend</Text>
+                </View>
+                {restaurants.map(item => (
+                    <TouchableOpacity
+                        key={item.id}
+                        style={styles.card}
+                        onPress={() => navigation.navigate('Restaurant', { id: item.id, name: item.name })}
+                    >
+                      <View style={styles.cardImageContainer}>
+                        <Text style={styles.cardEmoji}>🍽️</Text>
+                        {item.deliveryFee === 0 && (
+                            <View style={styles.freeBadge}>
+                              <Text style={styles.freeBadgeText}>Free Delivery</Text>
+                            </View>
+                        )}
+                      </View>
+                      <View style={styles.cardContent}>
+                        <Text style={styles.cardName}>{item.name}</Text>
+                        <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
+                        <View style={styles.cardMeta}>
+                          <Text style={styles.cardRating}>⭐ {item.rating?.toFixed(1) ?? '0.0'}</Text>
+                          <Text style={styles.cardDot}>·</Text>
+                          <Text style={styles.cardDelivery}>🕐 {item.estimatedDeliveryMinutes ?? 30} мин</Text>
+                          <Text style={styles.cardDot}>·</Text>
+                          <Text style={styles.cardFee}>{Number(item.deliveryFee) > 0 ? `₩${Number(item.deliveryFee).toLocaleString()}` : 'Бесплатно'}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+        )}
       </SafeAreaView>
   );
 }
@@ -197,6 +271,7 @@ const styles = StyleSheet.create({
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, height: 44 },
   searchIcon: { fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A' },
+  clearIcon: { fontSize: 16, color: '#999', paddingHorizontal: 4 },
   categoriesScroll: { marginTop: 16 },
   categoriesContainer: { paddingHorizontal: 16, gap: 12, paddingVertical: 4 },
   categoryItem: { alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 12, minWidth: 70, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
@@ -234,4 +309,7 @@ const styles = StyleSheet.create({
   cardDot: { color: '#ddd' },
   cardDelivery: { fontSize: 12, color: '#666' },
   cardFee: { fontSize: 12, color: '#666' },
+  noResults: { alignItems: 'center', justifyContent: 'center', padding: 60, gap: 8 },
+  noResultsEmoji: { fontSize: 48 },
+  noResultsText: { fontSize: 14, color: '#999', textAlign: 'center' },
 });

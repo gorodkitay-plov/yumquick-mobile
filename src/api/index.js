@@ -41,7 +41,7 @@ export const restaurantApi = {
   getById: (id) => api.get(`/restaurants/${id}`),
   getNearby: (params) => api.get('/restaurants/nearby', { params }),
   getPopular: () => api.get('/restaurants/popular'),
-  search: (query) => api.get('/restaurants/search', { params: { query } }),
+  search: (keyword) => api.get('/restaurants/search', { params: { keyword } }),
   getMenu: (id) => api.get(`/restaurants/${id}/menu`),
 };
 
