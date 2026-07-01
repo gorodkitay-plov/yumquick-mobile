@@ -5,8 +5,8 @@ import {
     TextInput, Modal
 } from 'react-native';
 import { useCartStore } from '../store/cartStore';
-import { orderApi, userApi } from '../api';
 import AddressPickerMap from '../components/AddressPickerMap';
+import { orderApi, userApi, couponApi } from '../api';
 
 export default function CheckoutScreen({ navigation }) {
     const { cart, clearCart } = useCartStore();
@@ -18,6 +18,34 @@ export default function CheckoutScreen({ navigation }) {
     const [newAddress, setNewAddress] = useState({ label: 'HOME', detailAddress: '', lat: 37.4979, lng: 127.0276 });
     const [mapInitialPos] = useState({ lat: 37.4979, lng: 127.0276 });
     const subtotal = cart?.subtotal ?? 0;
+    const [couponCode, setCouponCode] = useState('');
+    const [coupon, setCoupon] = useState(null);
+    const [couponLoading, setCouponLoading] = useState(false);
+    const [showCouponModal, setShowCouponModal] = useState(false);
+    const [availableCoupons, setAvailableCoupons] = useState([]);
+
+    // функция загрузки купонов:
+    const loadCoupons = async () => {
+        try {
+            const res = await couponApi.getAvailable();
+            setAvailableCoupons(res.data.data ?? []);
+        } catch (e) {}
+    };
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return;
+        setCouponLoading(true);
+        try {
+            const res = await couponApi.validate(couponCode.trim(), subtotal);
+            setCoupon(res.data.data);
+            Alert.alert('✅', `Купон применён! Скидка ₩${Number(res.data.data.discountAmount).toLocaleString()}`);
+        } catch (e) {
+            Alert.alert('Ошибка', e.response?.data?.message ?? 'Неверный купон');
+            setCoupon(null);
+        } finally {
+            setCouponLoading(false);
+        }
+    };
 
     const loadAddresses = () => {
         userApi.getAddresses()
@@ -76,7 +104,15 @@ export default function CheckoutScreen({ navigation }) {
         } finally {
             setIsLoading(false);
         }
+
+        const res = await orderApi.checkout({
+            addressId: selectedAddress.id,
+            notes: note,
+            couponId: coupon?.couponId ?? null,
+        });
     };
+
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -123,6 +159,25 @@ export default function CheckoutScreen({ navigation }) {
                     </TouchableOpacity>
                 </View>
 
+                {/* Coupon */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>🎫 Промокод</Text>
+                    {coupon ? (
+                        <View style={styles.couponApplied}>
+                            <Text style={styles.couponAppliedText}>✅ {coupon.code} — скидка ₩{Number(coupon.discountAmount).toLocaleString()}</Text>
+                            <TouchableOpacity onPress={() => setCoupon(null)}>
+                                <Text style={styles.couponRemove}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity style={styles.couponPickerBtn} onPress={() => { loadCoupons(); setShowCouponModal(true); }}>
+                            <Text style={styles.couponPickerIcon}>🎫</Text>
+                            <Text style={styles.couponPickerText}>Выбрать промокод</Text>
+                            <Text style={styles.couponPickerArrow}>›</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
                 {/* Order Summary */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Order Summary</Text>
@@ -134,10 +189,18 @@ export default function CheckoutScreen({ navigation }) {
                                 <Text style={styles.summaryItemPrice}>₩{Number(item.totalPrice).toLocaleString()}</Text>
                             </View>
                         ))}
+                        {coupon && (
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>Скидка ({coupon.code})</Text>
+                                <Text style={[styles.summaryValue, { color: '#34C759' }]}>-₩{Number(coupon.discountAmount).toLocaleString()}</Text>
+                            </View>
+                        )}
                         <View style={styles.divider} />
                         <View style={styles.summaryRow}>
                             <Text style={styles.totalLabel}>Total</Text>
-                            <Text style={styles.totalValue}>₩{Number(subtotal).toLocaleString()}</Text>
+                            <Text style={styles.totalValue}>
+                                ₩{Number(coupon ? subtotal - Number(coupon.discountAmount) : subtotal).toLocaleString()}
+                            </Text>
                         </View>
                     </View>
                 </View>
@@ -172,9 +235,11 @@ export default function CheckoutScreen({ navigation }) {
             </View>
 
             {/* Add Address Modal */}
-            <Modal visible={showAddModal} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalCard}>
+            <Modal visible={showAddModal} animationType="slide" transparent onRequestClose={() => setShowAddModal(false)}>
+                <View style={styles.modalOverlay}
+                      onStartShouldSetResponder={() => true}
+                      onResponderRelease={() => setShowAddModal(false)}>
+                    <View style={styles.modalCard} onStartShouldSetResponder={e => e.stopPropagation()}>
                         <Text style={styles.modalTitle}>Add New Address</Text>
 
                         <Text style={styles.inputLabel}>Type</Text>
@@ -223,6 +288,56 @@ export default function CheckoutScreen({ navigation }) {
                                 <Text style={styles.saveBtnText}>Save</Text>
                             </TouchableOpacity>
                         </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Coupon Modal */}
+            <Modal visible={showCouponModal} animationType="slide" transparent onRequestClose={() => setShowCouponModal(false)}>
+                <View style={styles.modalOverlay}
+                      onStartShouldSetResponder={() => true}
+                      onResponderRelease={() => setShowCouponModal(false)}>
+                    <View style={styles.modalCard} onStartShouldSetResponder={e => e.stopPropagation()}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Доступные купоны</Text>
+                            <TouchableOpacity onPress={() => setShowCouponModal(false)}>
+                                <Text style={styles.modalClose}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {availableCoupons.length === 0 ? (
+                            <View style={styles.noCoupons}>
+                                <Text style={styles.noCouponsText}>Нет доступных купонов</Text>
+                            </View>
+                        ) : (
+                            availableCoupons.map(c => (
+                                <TouchableOpacity
+                                    key={c.id}
+                                    style={styles.couponCard}
+                                    onPress={async () => {
+                                        try {
+                                            const res = await couponApi.validate(c.code, subtotal);
+                                            setCoupon(res.data.data);
+                                            setShowCouponModal(false);
+                                        } catch (e) {
+                                            Alert.alert('Ошибка', e.response?.data?.message ?? 'Купон недоступен');
+                                        }
+                                    }}
+                                >
+                                    <View style={styles.couponCardLeft}>
+                                        <Text style={styles.couponCardCode}>{c.code}</Text>
+                                        <Text style={styles.couponCardDesc}>{c.description}</Text>
+                                        <Text style={styles.couponCardValue}>
+                                            {c.discountType === 'PERCENTAGE' ? `${c.discountValue}% скидка` :
+                                                c.discountType === 'FIXED' ? `₩${Number(c.discountValue).toLocaleString()} скидка` :
+                                                    'Бесплатная доставка'}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.couponCardRight}>
+                                        <Text style={styles.couponCardApply}>Применить</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -282,4 +397,26 @@ const styles = StyleSheet.create({
     cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#888' },
     saveBtn: { flex: 1, padding: 16, borderRadius: 16, backgroundColor: '#FF6B00', alignItems: 'center' },
     saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+    couponRow: { flexDirection: 'row', gap: 8 },
+    couponInput: { flex: 1, backgroundColor: '#FFF8F0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, borderWidth: 1.5, borderColor: '#F0E8DF' },
+    couponBtn: { backgroundColor: '#FF6B00', borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center' },
+    couponBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    couponApplied: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#E8F8EC', borderRadius: 12, padding: 12 },
+    couponAppliedText: { fontSize: 14, color: '#34C759', fontWeight: '600' },
+    couponRemove: { fontSize: 16, color: '#999', paddingHorizontal: 4 },
+    couponPickerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#F0E8DF', gap: 8 },
+    couponPickerIcon: { fontSize: 18 },
+    couponPickerText: { flex: 1, fontSize: 14, color: '#1A1A1A', fontWeight: '500' },
+    couponPickerArrow: { fontSize: 20, color: '#FF6B00' },
+    couponCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8F0', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: '#FF6B00' },
+    couponCardLeft: { flex: 1, gap: 4 },
+    couponCardCode: { fontSize: 16, fontWeight: '700', color: '#FF6B00' },
+    couponCardDesc: { fontSize: 12, color: '#888' },
+    couponCardValue: { fontSize: 13, fontWeight: '600', color: '#1A1A1A' },
+    couponCardRight: { paddingLeft: 12 },
+    couponCardApply: { fontSize: 13, fontWeight: '700', color: '#FF6B00' },
+    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+    modalClose: { fontSize: 20, color: '#888' },
+    noCoupons: { padding: 30, alignItems: 'center' },
+    noCouponsText: { fontSize: 14, color: '#999' },
 });

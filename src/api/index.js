@@ -85,3 +85,9 @@ export const favoriteApi = {
   add: (restaurantId) => api.post(`/favorites/${restaurantId}`),
   remove: (restaurantId) => api.delete(`/favorites/${restaurantId}`),
 };
+
+// ── Coupons ───────────────────────────────────────────
+export const couponApi = {
+  validate: (code, subtotal) => api.post('/coupons/validate', { code, subtotal }),
+  getAvailable: () => api.get('/coupons'),
+};

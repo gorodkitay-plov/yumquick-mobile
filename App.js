@@ -22,6 +22,7 @@ import EditProfileScreen from './src/screens/EditProfileScreen';
 import AddressesScreen from './src/screens/AddressesScreen';
 import WriteReviewScreen from './src/screens/WriteReviewScreen';
 import FavoritesScreen from './src/screens/FavoritesScreen';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -41,6 +42,7 @@ export default function App() {
     const { isAuthenticated, checkAuth } = useAuthStore();
     const [showSplash, setShowSplash] = useState(false);
 
+    usePushNotifications();
     useEffect(() => { checkAuth(); }, []);
 
     useEffect(() => {
