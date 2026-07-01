@@ -21,6 +21,7 @@ import OrderDetailScreen from './src/screens/OrderDetailScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import AddressesScreen from './src/screens/AddressesScreen';
 import WriteReviewScreen from './src/screens/WriteReviewScreen';
+import FavoritesScreen from './src/screens/FavoritesScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -64,6 +65,7 @@ export default function App() {
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                         <Stack.Screen name="Addresses" component={AddressesScreen} />
                         <Stack.Screen name="WriteReview" component={WriteReviewScreen} />
+                        <Stack.Screen name="Favourites" component={FavoritesScreen} />
                     </>
                 ) : (
                     <>

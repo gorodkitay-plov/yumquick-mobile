@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 const MENU_ITEMS = [
   { id: 'orders', icon: '📋', label: 'My Orders' },
   { id: 'profile', icon: '👤', label: 'My Profile' },
+  { id: 'favorites', icon: '❤️', label: 'Favourites' },
   { id: 'address', icon: '📍', label: 'Delivery Address' },
   { id: 'payment', icon: '💳', label: 'Payment Methods' },
   { id: 'contact', icon: '💬', label: 'Contact Us' },
@@ -32,6 +33,10 @@ export default function ProfileScreen({ navigation }) {
     }
     if (id === 'address') {
       navigation.navigate('Addresses');
+      return;
+    }
+    if (id === 'favorites') {
+      navigation.navigate('Favourites');
       return;
     }
     Alert.alert('Coming Soon', 'This feature is in development');

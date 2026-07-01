@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { restaurantApi, cartApi, reviewApi } from '../api';
 import { useCartStore } from '../store/cartStore';
+import { favoriteApi } from '../api';
 
 export default function RestaurantScreen({ route, navigation }) {
     const { id, name } = route.params;
@@ -16,6 +17,7 @@ export default function RestaurantScreen({ route, navigation }) {
     const [reviews, setReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const { fetchCart, cart } = useCartStore();
+    const [isFavorite, setIsFavorite] = useState(false);
 
     const cartCount = cart?.items?.reduce((sum, i) => sum + i.quantity, 0) ?? 0;
 
@@ -32,6 +34,10 @@ export default function RestaurantScreen({ route, navigation }) {
         }).catch(() => {})
             .finally(() => setIsLoading(false));
     }, []);
+
+    favoriteApi.getStatus(id)
+        .then(res => setIsFavorite(res.data.data.isFavorite))
+        .catch(() => {});
 
     useEffect(() => {
         if (activeTab === 'reviews' && reviews.length === 0) {
@@ -57,6 +63,20 @@ export default function RestaurantScreen({ route, navigation }) {
         ? (menu.find(c => c.id === selectedCategory)?.items ?? [])
         : menu.flatMap(c => c.items ?? []);
 
+    // функция toggle:
+    const toggleFavorite = async () => {
+        try {
+            if (isFavorite) {
+                await favoriteApi.remove(id);
+            } else {
+                await favoriteApi.add(id);
+            }
+            setIsFavorite(!isFavorite);
+        } catch {
+            Alert.alert('Ошибка', 'Не удалось обновить избранное');
+        }
+    };
+
     if (isLoading) return (
         <SafeAreaView style={styles.container}>
             <ActivityIndicator size="large" color="#FF6B00" style={{ flex: 1 }} />
@@ -73,6 +93,9 @@ export default function RestaurantScreen({ route, navigation }) {
                     <Text style={styles.backIcon}>‹</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>{name}</Text>
+                <TouchableOpacity style={styles.favBtn} onPress={toggleFavorite}>
+                    <Text style={styles.favIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.cartBtn} onPress={() => navigation.navigate('Main', { screen: 'Cart' })}>
                     <Text style={styles.cartIcon}>🛒</Text>
                     {cartCount > 0 && (
@@ -229,6 +252,8 @@ const styles = StyleSheet.create({
     cartIcon: { fontSize: 18 },
     cartBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#fff', borderRadius: 10, width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FF6B00' },
     cartBadgeText: { fontSize: 10, fontWeight: '700', color: '#FF6B00' },
+    favBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2, marginRight: 8 },
+    favIcon: { fontSize: 18 },
 
     restaurantInfo: { marginHorizontal: 16, marginBottom: 12, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
     restaurantImageContainer: { height: 120, backgroundColor: '#FFF0E6', alignItems: 'center', justifyContent: 'center' },

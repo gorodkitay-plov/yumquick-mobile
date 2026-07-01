@@ -77,3 +77,11 @@ export const reviewApi = {
   getMy: () => api.get('/reviews/my'),
   getRestaurantReviews: (restaurantId) => api.get(`/restaurants/${restaurantId}/reviews`),
 };
+
+// favorite
+export const favoriteApi = {
+  getAll: () => api.get('/favorites'),
+  getStatus: (restaurantId) => api.get(`/favorites/${restaurantId}/status`),
+  add: (restaurantId) => api.post(`/favorites/${restaurantId}`),
+  remove: (restaurantId) => api.delete(`/favorites/${restaurantId}`),
+};
