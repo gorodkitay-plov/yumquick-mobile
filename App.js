@@ -23,6 +23,7 @@ import AddressesScreen from './src/screens/AddressesScreen';
 import WriteReviewScreen from './src/screens/WriteReviewScreen';
 import FavoritesScreen from './src/screens/FavoritesScreen';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
+import MyReviewsScreen from './src/screens/MyReviewsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -68,6 +69,7 @@ export default function App() {
                         <Stack.Screen name="Addresses" component={AddressesScreen} />
                         <Stack.Screen name="WriteReview" component={WriteReviewScreen} />
                         <Stack.Screen name="Favourites" component={FavoritesScreen} />
+                        <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
                     </>
                 ) : (
                     <>
