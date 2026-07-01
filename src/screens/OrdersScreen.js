@@ -4,6 +4,8 @@ import {
   StyleSheet, SafeAreaView, ActivityIndicator, StatusBar, Alert
 } from 'react-native';
 import { orderApi } from '../api';
+import { cartApi } from '../api';
+import { useCartStore } from '../store/cartStore';
 
 const TABS = ['Active', 'Completed', 'Cancelled'];
 
@@ -23,6 +25,7 @@ export default function OrdersScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Active');
+  const { fetchCart } = useCartStore();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -63,6 +66,24 @@ export default function OrdersScreen({ navigation }) {
     const map = STATUS_MAP[o.status];
     return map?.tab === activeTab;
   });
+
+  const reorder = async (item) => {
+    try {
+      await cartApi.clear();
+      for (const orderItem of item.items) {
+        await cartApi.addItem({
+          restaurantId: item.restaurantId,
+          menuItemId: orderItem.menuItemId,
+          quantity: orderItem.quantity,
+          options: [],
+        });
+      }
+      await fetchCart();
+      navigation.navigate('Main', { screen: 'Cart' });
+    } catch {
+      Alert.alert('Ошибка', 'Не удалось повторить заказ');
+    }
+  };
 
   return (
       <SafeAreaView style={styles.container}>
@@ -123,7 +144,15 @@ export default function OrdersScreen({ navigation }) {
                                   style={styles.reviewBtn}
                                   onPress={() => navigation.navigate('WriteReview', { orderId: item.id, restaurantName: item.restaurantName })}
                               >
-                                <Text style={styles.reviewBtnText}>Leave a review</Text>
+                                <Text style={styles.reviewBtnText}>Оставить отзыв</Text>
+                              </TouchableOpacity>
+                          )}
+                          {activeTab === 'Completed' && (
+                              <TouchableOpacity
+                                  style={styles.reorderBtn}
+                                  onPress={() => reorder(item)}
+                              >
+                                <Text style={styles.reorderBtnText}>повторный заказ</Text>
                               </TouchableOpacity>
                           )}
                         </View>
@@ -169,4 +198,6 @@ const styles = StyleSheet.create({
   trackBtnText: { fontSize: 11, color: '#fff', fontWeight: '600' },
   cancelBtn: { backgroundColor: '#FFE5E5', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
   cancelBtnText: { fontSize: 11, color: '#FF3B30', fontWeight: '600' },
+  reorderBtn: { backgroundColor: '#FF6B00', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, marginTop: 4 },
+  reorderBtnText: { fontSize: 11, color: '#fff', fontWeight: '600' },
 });
